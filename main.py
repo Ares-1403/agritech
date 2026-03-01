@@ -4,9 +4,6 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from PIL import Image
-import io
-import base64
 import sqlite3
 import json
 import os
@@ -174,4 +171,5 @@ async def root():
 
 # Bloque para ejecutar directamente con: python main.py
 if __name__ == "__main__":
+
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
