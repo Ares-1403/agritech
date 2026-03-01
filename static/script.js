@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'humedad': {
             label: 'Humedad',
             key: 'humedad',
-            color: '#1976D2', // <-- AZUL FUERTE
+            color: '#1976D2',
             yTitle: 'Humedad (% VWC)',
             unit: '%',
             min: 0, max: 100,
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             yTitleRight: 'DPV (kPa)',
             datasets: [
                 { label: 'Temperatura', key: 'temperatura', color: '#ff6384', yAxis: 'y', unit: 'C' },
-                { label: 'DPV', key: 'dpv', color: '#4FC3F7', yAxis: 'y1', unit: ' kPa' } // <-- AZUL BAJITO
+                { label: 'DPV', key: 'dpv', color: '#4FC3F7', yAxis: 'y1', unit: ' kPa' }
             ]
         }
     };
@@ -89,10 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedLayer: null 
     };
 
-    // --- NUEVO: ESTADO DE IA (EDGE COMPUTING) ---
+    // --- ESTADO DE IA (EDGE COMPUTING) CORREGIDO ---
     let tfModel = null;
-    // IMPORTANTE: Ajusta este array al orden exacto de las clases con las que entrenaste YOLO
-    const CLASSES = ["Antracnosis", "Fumagina", "Minador", "Saludable", "Sarna"]; 
+    // CLASES EXACTAS SEGÚN TU DATA.YAML
+    const CLASSES = ["Antracnosis", "Mancha de Alga", "Rona", "Sarna", "Fumagina"]; 
 
     async function initTF() {
         try {
@@ -309,10 +309,8 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.charts.uvDetail.classList.remove('hidden');
         UI.charts.uvTitle.textContent = `Ciclo Solar: ${dateStr}`;
 
-        // Ordenar cronologicamente
         readings.sort((a,b) => parseDate(a.fecha_medicion) - parseDate(b.fecha_medicion));
         
-        // Mapeo con relleno de ceros para la hora
         const labels = readings.map(r => {
             const h = parseDate(r.fecha_medicion).getHours();
             return `${String(h).padStart(2, '0')}:00`;
@@ -323,7 +321,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = UI.charts.uvCanvas.getContext('2d');
         if (state.uvChart) state.uvChart.destroy();
 
-        // Grafico Dual (Campanas de Gauss)
         state.uvChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -368,7 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         grid: { display: false },
                         ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } 
                     },
-                    // Eje Izquierdo: Titulos negros
                     y: {
                         type: 'linear',
                         display: true,
@@ -381,7 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             font: { weight: 'bold' }
                         }
                     },
-                    // Eje Derecho: Titulos negros
                     y1: {
                         type: 'linear',
                         display: true,
@@ -531,25 +526,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // --- 1. ENCABEZADO CENTRADO ---
         doc.setFillColor(30, 30, 30); 
         doc.rect(0, 0, 210, 30, 'F');
-        
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
         doc.text("Plataforma Integral de Monitoreo de Cultivos", 105, 18, { align: "center" });
-        
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Fecha de Corte: ${new Date().toLocaleString()}`, 105, 26, { align: "center" });
 
-        // --- 2. INFORMACION DEL SENSOR ---
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
         doc.text(`Sensor: ${state.plantId}`, 15, 45);
-        
         doc.setFontSize(11);
         doc.setFont("helvetica", "normal");
         doc.text(`Variedad: ${UI.info.variety.textContent}`, 15, 52);
@@ -557,10 +547,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let rawStatus = UI.info.status.textContent || "";
         doc.text(`Estado: ${rawStatus}`, 100, 52);
 
-        // --- 3. EVIDENCIA VISUAL ---
         doc.setDrawColor(200, 200, 200);
         doc.line(15, 58, 195, 58); 
-        
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.text("Evidencia Visual e Inferencia IA", 15, 65);
@@ -589,14 +577,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 doc.setFont("courier", "normal"); 
                 
                 listItems.forEach(item => {
-                    if (currentY > 270) {
-                        doc.addPage();
-                        currentY = 20;
-                    }
+                    if (currentY > 270) { doc.addPage(); currentY = 20; }
                     doc.text(`- ${item.textContent}`, 20, currentY);
                     currentY += 6;
                 });
-                
             } else {
                 doc.setFontSize(10);
                 doc.setFont("helvetica", "italic");
@@ -607,12 +591,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn("Error PDF imagenes", e);
         }
 
-        // --- 4. GRAFICAS DE BARRAS ---
         currentY += 10;
-        if (currentY + 90 > 280) { 
-            doc.addPage();
-            currentY = 20; 
-        }
+        if (currentY + 90 > 280) { doc.addPage(); currentY = 20; }
         
         doc.setFont("helvetica", "bold");
         doc.setFontSize(12);
@@ -622,7 +602,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (state.readings && state.readings.length > 0) {
             const lastData = state.readings[state.readings.length - 1];
-            
             const allUV = state.readings.map(r => r.radiacion_uv || 0);
             const allSol = state.readings.map(r => r.solar_rad || 0);
             const maxUV = Math.max(...allUV);
@@ -640,40 +619,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const barHeight = 7; 
             const maxBarWidth = 100;
-
             doc.setFontSize(9);
             doc.setFont("helvetica", "normal");
 
             metrics.forEach(m => {
                 doc.setTextColor(0,0,0);
                 doc.text(m.label, 15, barY + 5);
-                
                 doc.setFillColor(240, 240, 240);
                 doc.rect(60, barY, maxBarWidth, barHeight, 'F');
-
                 const safeValue = Math.min(m.value, m.max);
                 const valueWidth = (safeValue / m.max) * maxBarWidth;
-                
                 doc.setFillColor(m.color[0], m.color[1], m.color[2]);
                 doc.rect(60, barY, valueWidth, barHeight, 'F');
-                
                 doc.text(String(m.value), 60 + valueWidth + 2, barY + 5);
-
                 barY += 12; 
             });
 
             currentY = barY + 10;
-
-            // --- 5. OBSERVACIONES ---
-            if (currentY + 50 > 280) {
-                doc.addPage();
-                currentY = 20;
-            }
+            if (currentY + 50 > 280) { doc.addPage(); currentY = 20; }
 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(12);
             doc.text("Diagnostico Tecnico", 15, currentY);
-            
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
             currentY += 8;
@@ -700,16 +667,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentY += 6;
                 });
             }
-
         } else {
             doc.text("Sin datos telemetricos disponibles.", 15, currentY + 10);
         }
 
-        // --- PIE DE PAGINA ---
         doc.setFontSize(8);
         doc.setTextColor(150);
         doc.text("Reporte generado automaticamente - Sistema AgriTech", 105, 290, null, null, "center");
-
         doc.save(`Reporte_Tecnico_${state.plantId}.pdf`);
     }
 
@@ -721,9 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         fetch('/api/farm_map')
             .then(r => r.json())
-            .then(plants => {
-                renderMarkers(plants); 
-            });
+            .then(plants => { renderMarkers(plants); });
     }
 
     function resetUploadUI() {
@@ -736,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 9. EVENTOS PRINCIPALES Y EDGE AI INFERENCIA
+    // 9. INFERENCIA Y DIBUJO (CANVAS NMS)
     // ==========================================
     UI.upload.input.addEventListener('change', async (e) => {
         if (!state.plantId) return alert("Selecciona un sensor.");
@@ -746,88 +708,156 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
 
         reader.onload = async (ev) => {
-            // 1. Mostrar preview original
             UI.upload.preview.src = ev.target.result;
             UI.upload.preview.classList.remove('hidden');
             UI.upload.iconPreview.classList.add('hidden');
-            UI.upload.list.innerHTML = 'Analizando localmente (Edge Computing)...';
+            UI.upload.list.innerHTML = 'Analizando matrices localmente...';
 
-            const img = new Image();
-            img.src = ev.target.result;
-            img.onload = async () => {
+            const imgElement = new Image();
+            imgElement.src = ev.target.result;
+            
+            imgElement.onload = async () => {
                 try {
-                    // 2. Preprocesamiento (A Tensor 640x640)
-                    const tensor = tf.browser.fromPixels(img)
+                    // 1. PREPROCESAMIENTO (A Tensor 640x640)
+                    const tensor = tf.browser.fromPixels(imgElement)
                         .resizeBilinear([640, 640])
                         .div(255.0)
                         .expandDims(0);
 
-                    // 3. Inferencia Edge AI
+                    // 2. INFERENCIA
                     const predictions = await tfModel.executeAsync(tensor);
                     const data = await predictions.data();
-
-                    // 4. Procesar salida de YOLOv8 [1, 9, 8400]
+                    
+                    // 3. EXTRACCIÓN DE CAJAS (YOLOv8 Output: [1, 4 + Clases, 8400])
                     const numClasses = CLASSES.length;
                     const numAnchors = 8400;
-                    let bestScore = 0;
-                    let bestClass = -1;
+                    
+                    let boxes = [];
+                    let scores = [];
+                    let classIds = [];
 
-                    // Mapeo de memoria: channel * 8400 + anchor
                     for (let i = 0; i < numAnchors; i++) {
+                        let maxScore = 0;
+                        let classIndex = -1;
+
                         for (let c = 0; c < numClasses; c++) {
                             const score = data[(4 + c) * numAnchors + i];
-                            if (score > bestScore) {
-                                bestScore = score;
-                                bestClass = c;
+                            if (score > maxScore) {
+                                maxScore = score;
+                                classIndex = c;
                             }
+                        }
+
+                        if (maxScore > 0.40) { // Umbral general
+                            const xc = data[0 * numAnchors + i];
+                            const yc = data[1 * numAnchors + i];
+                            const w = data[2 * numAnchors + i];
+                            const h = data[3 * numAnchors + i];
+
+                            // Convertir formato para TensorFlow NMS [y1, x1, y2, x2]
+                            boxes.push([yc - h / 2, xc - w / 2, yc + h / 2, xc + w / 2]);
+                            scores.push(maxScore);
+                            classIds.push(classIndex);
                         }
                     }
 
-                    // 5. ¡VITAL! Limpiar RAM de la tablet inmediatamente
                     tf.dispose([tensor, predictions]);
 
-                    // 6. Validar confianza
-                    const detectionsList = [];
-                    if (bestScore > 0.40) { // Umbral de confianza 40%
-                        detectionsList.push({
-                            class_name: CLASSES[bestClass],
-                            confidence: (bestScore * 100).toFixed(2) + "%"
+                    // 4. NON-MAXIMUM SUPPRESSION (NMS) Y DIBUJO
+                    let detectionsList = [];
+                    let finalImageBase64 = ev.target.result;
+
+                    if (boxes.length > 0) {
+                        const boxesTensor = tf.tensor2d(boxes, [boxes.length, 4]);
+                        const scoresTensor = tf.tensor1d(scores);
+                        
+                        // Eliminar detecciones duplicadas en la misma área
+                        const indicesTensor = await tf.image.nonMaxSuppressionAsync(boxesTensor, scoresTensor, 15, 0.45, 0.45);
+                        const indices = indicesTensor.dataSync();
+                        tf.dispose([boxesTensor, scoresTensor, indicesTensor]);
+
+                        // Preparar Canvas para dibujar
+                        const canvas = document.createElement('canvas');
+                        canvas.width = imgElement.width;
+                        canvas.height = imgElement.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(imgElement, 0, 0);
+
+                        // Escalar coordenadas (IA vio 640x640, pero la foto original tiene otra resolución)
+                        const scaleX = canvas.width / 640;
+                        const scaleY = canvas.height / 640;
+
+                        ctx.lineWidth = 5;
+                        ctx.font = "bold 26px Montserrat, sans-serif";
+                        ctx.textBaseline = "top";
+
+                        indices.forEach(i => {
+                            const [y1, x1, y2, x2] = boxes[i];
+                            const cls = classIds[i];
+                            const score = scores[i];
+                            const className = CLASSES[cls];
+
+                            const rx1 = x1 * scaleX;
+                            const ry1 = y1 * scaleY;
+                            const rw = (x2 - x1) * scaleX;
+                            const rh = (y2 - y1) * scaleY;
+
+                            const color = '#f44336'; // Rojo de Alerta
+                            
+                            // Dibujar Caja
+                            ctx.strokeStyle = color;
+                            ctx.strokeRect(rx1, ry1, rw, rh);
+                            
+                            // Dibujar Fondo del Texto
+                            const text = `${className} ${(score * 100).toFixed(1)}%`;
+                            const textWidth = ctx.measureText(text).width;
+                            ctx.fillStyle = color;
+                            ctx.fillRect(rx1 - 2, ry1 - 35, textWidth + 14, 35);
+                            
+                            // Dibujar Texto
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText(text, rx1 + 5, ry1 - 32);
+
+                            detectionsList.push({
+                                class_name: className,
+                                confidence: (score * 100).toFixed(2) + "%"
+                            });
                         });
+                        
+                        finalImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
                     }
 
-                    // 7. Actualizar Interfaz
+                    // 5. ACTUALIZAR INTERFAZ Y BASE DE DATOS
                     const html = detectionsList.length 
                         ? '<ul>' + detectionsList.map(x=>`<li><strong>${x.class_name}</strong>: ${x.confidence}</li>`).join('') + '</ul>' 
-                        : 'Planta Saludable';
+                        : 'No se encontraron patologías en la hoja.';
                     UI.upload.list.innerHTML = html;
 
-                    // Mostramos la original para ahorrar recursos de pintado en canvas
-                    UI.upload.result.src = ev.target.result;
+                    UI.upload.result.src = finalImageBase64;
                     UI.upload.result.classList.remove('hidden');
                     UI.upload.iconAnalysis.classList.add('hidden');
 
                     if(detectionsList.length > 0) {
                         const topDisease = detectionsList[0].class_name;
                         UI.info.status.innerHTML = `<strong style="color:#f44336">Alerta: ${topDisease}</strong>`;
+                    } else {
+                        UI.info.status.innerHTML = `<strong style="color:#4CAF50">Saludable</strong>`;
                     }
 
-                    // 8. Enviar JSON al Fog Node para persistencia
-                    // Enviamos ev.target.result para que el PDF generator tenga la imagen
                     await fetch(`/api/visual_analysis/${state.plantId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             detections: detectionsList,
-                            image_base64: ev.target.result 
+                            image_base64: finalImageBase64 
                         })
                     });
                     
-                    // Refrescar marcadores del mapa
                     fetch('/api/farm_map').then(r => r.json()).then(renderMarkers);
 
                 } catch (error) {
                     console.error("Error en inferencia:", error);
-                    UI.upload.list.innerHTML = 'Error al procesar imagen. Revisa la consola.';
+                    UI.upload.list.innerHTML = 'Error en motor matemático. Revisa consola.';
                 }
             };
         };
